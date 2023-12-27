@@ -219,13 +219,17 @@ impl Index {
     };
 
     let path2 = options.data_dir()?.join("cache.redb");
-    let cache_size2 = 1 << 30;
+    let cache_size2 = 1 << 30; // 1GB cache
 
-    let database2 = Database::builder()
-        .set_cache_size(cache_size2) // 1GB cache
-        .open(&path2).unwrap_or(Database::builder()
-        .set_cache_size(cache_size2) // 1GB cache
-        .create(&path2).unwrap());
+    let database2 = if path2.exists() {
+      Database::builder()
+        .set_cache_size(cache_size2)
+        .open(&path2)?
+    } else {
+      Database::builder()
+        .set_cache_size(cache_size2)
+        .create(&path2)?
+    };
 
     let database = match Database::builder()
       .set_cache_size(db_cache_size)
