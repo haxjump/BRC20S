@@ -59,6 +59,7 @@ impl<'index> Updater<'_> {
   }
 
   pub(crate) fn update_index(&mut self) -> Result {
+    let mut wtx2 = self.index.begin_write2()?;
     let mut wtx = self.index.begin_write()?;
     let starting_height = self.index.client.get_block_count()? + 1;
 
@@ -98,6 +99,7 @@ impl<'index> Updater<'_> {
         &mut outpoint_sender,
         &mut tx_out_receiver,
         &mut wtx,
+        &mut wtx2,
         block,
       )?;
 
@@ -117,8 +119,10 @@ impl<'index> Updater<'_> {
 
       if uncommitted == 200 {
         self.commit(wtx)?;
+        wtx2.commit()?;
         uncommitted = 0;
         wtx = self.index.begin_write()?;
+        wtx2 = self.index.begin_write2()?;
         let height = wtx
           .open_table(HEIGHT_TO_BLOCK_HASH)?
           .range(0..)?
@@ -318,6 +322,7 @@ impl<'index> Updater<'_> {
     outpoint_sender: &mut Sender<OutPoint>,
     tx_out_receiver: &mut Receiver<TxOut>,
     wtx: &mut WriteTransaction,
+    wtx2: &mut WriteTransaction,
     block: BlockData,
   ) -> Result<()> {
     Reorg::detect_reorg(&block, self.height, self.index)?;
@@ -332,7 +337,7 @@ impl<'index> Updater<'_> {
       return Err(anyhow!("Previous block did not consume all input values"));
     };
 
-    let mut outpoint_to_entry = wtx.open_table(OUTPOINT_TO_ENTRY)?;
+    let mut outpoint_to_entry = wtx2.open_table(OUTPOINT_TO_ENTRY)?;
 
     let index_inscriptions = self.height >= index.first_inscription_height;
 

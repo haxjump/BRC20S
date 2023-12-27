@@ -25,7 +25,7 @@ enum Origin {
   Old,
 }
 
-pub(super) struct InscriptionUpdater<'a, 'db, 'tx> {
+pub(super) struct InscriptionUpdater<'a, 'db, 'tx, 'db2, 'tx2> {
   flotsam: Vec<Flotsam>,
   pub(super) operations: HashMap<Txid, Vec<InscriptionOp>>,
   height: u64,
@@ -38,7 +38,7 @@ pub(super) struct InscriptionUpdater<'a, 'db, 'tx> {
   pub(super) next_cursed_number: i64,
   pub(super) next_number: i64,
   number_to_id: &'a mut Table<'db, 'tx, i64, &'static InscriptionIdValue>,
-  outpoint_to_entry: &'a mut Table<'db, 'tx, &'static OutPointValue, &'static [u8]>,
+  outpoint_to_entry: &'a mut Table<'db2, 'tx2, &'static OutPointValue, &'static [u8]>,
   reward: u64,
   reinscription_id_to_seq_num: &'a mut Table<'db, 'tx, &'static InscriptionIdValue, u64>,
   sat_to_inscription_id: &'a mut MultimapTable<'db, 'tx, u64, &'static InscriptionIdValue>,
@@ -49,7 +49,7 @@ pub(super) struct InscriptionUpdater<'a, 'db, 'tx> {
   tx_out_cache: &'a mut HashMap<OutPoint, TxOut>,
 }
 
-impl<'a, 'db, 'tx> InscriptionUpdater<'a, 'db, 'tx> {
+impl<'a, 'db, 'tx, 'db2, 'tx2> InscriptionUpdater<'a, 'db, 'tx, 'db2, 'tx2> {
   pub(super) fn new(
     height: u64,
     id_to_children: &'a mut MultimapTable<
@@ -63,7 +63,7 @@ impl<'a, 'db, 'tx> InscriptionUpdater<'a, 'db, 'tx> {
     id_to_entry: &'a mut Table<'db, 'tx, &'static InscriptionIdValue, InscriptionEntryValue>,
     lost_sats: u64,
     number_to_id: &'a mut Table<'db, 'tx, i64, &'static InscriptionIdValue>,
-    outpoint_to_entry: &'a mut Table<'db, 'tx, &'static OutPointValue, &'static [u8]>,
+    outpoint_to_entry: &'a mut Table<'db2, 'tx2, &'static OutPointValue, &'static [u8]>,
     reinscription_id_to_seq_num: &'a mut Table<'db, 'tx, &'static InscriptionIdValue, u64>,
     sat_to_inscription_id: &'a mut MultimapTable<'db, 'tx, u64, &'static InscriptionIdValue>,
     satpoint_to_id: &'a mut MultimapTable<
@@ -404,6 +404,7 @@ impl<'a, 'db, 'tx> InscriptionUpdater<'a, 'db, 'tx> {
 
   // write tx_out to outpoint_to_entry table
   pub(super) fn flush_cache(&mut self) -> Result {
+    log::info!("flush_cache, size: {}", self.tx_out_cache.len());
     for (outpoint, tx_out) in self.tx_out_cache.iter() {
       let mut entry = Vec::new();
       tx_out.consensus_encode(&mut entry)?;

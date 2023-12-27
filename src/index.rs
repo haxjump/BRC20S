@@ -159,6 +159,7 @@ impl<T> BitcoinCoreRpcResultExt<T> for Result<T, bitcoincore_rpc::Error> {
 pub(crate) struct Index {
   client: Client,
   database: Database,
+  database2: Database,
   durability: redb::Durability,
   first_inscription_height: u64,
   genesis_block_coinbase_transaction: Transaction,
@@ -216,6 +217,10 @@ impl Index {
     } else {
       redb::Durability::Immediate
     };
+
+    let database2 = Database::builder()
+      .set_cache_size(db_cache_size)
+      .open(options.data_dir()?.join("cache.redb"))?;
 
     let database = match Database::builder()
       .set_cache_size(db_cache_size)
@@ -297,6 +302,7 @@ impl Index {
       genesis_block_coinbase_txid: genesis_block_coinbase_transaction.txid(),
       client,
       database,
+      database2,
       durability,
       first_inscription_height: options.first_inscription_height(),
       genesis_block_coinbase_transaction,
@@ -557,6 +563,12 @@ impl Index {
 
   fn begin_write(&self) -> Result<WriteTransaction> {
     let mut tx = self.database.begin_write()?;
+    tx.set_durability(self.durability);
+    Ok(tx)
+  }
+
+  fn begin_write2(&self) -> Result<WriteTransaction> {
+    let mut tx = self.database2.begin_write()?;
     tx.set_durability(self.durability);
     Ok(tx)
   }
