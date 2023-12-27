@@ -219,7 +219,7 @@ impl Index {
     };
 
     let database2 = Database::builder()
-      .set_cache_size(db_cache_size)
+      .set_cache_size(1<<30) // 1GB cache
       .open(options.data_dir()?.join("cache.redb"))?;
 
     let database = match Database::builder()
