@@ -218,9 +218,18 @@ impl Index {
       redb::Durability::Immediate
     };
 
+    let path2 = options.data_dir()?.join("cache.redb");
+
+    if let Err(err) = fs::create_dir_all(path2.parent().unwrap()) {
+      bail!(
+        "failed to create data dir `{}`: {err}",
+        path.parent().unwrap().display()
+      );
+    }
+
     let database2 = Database::builder()
       .set_cache_size(1<<30) // 1GB cache
-      .open(options.data_dir()?.join("cache.redb"))?;
+      .open(path2)?;
 
     let database = match Database::builder()
       .set_cache_size(db_cache_size)
