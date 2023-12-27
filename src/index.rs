@@ -219,17 +219,13 @@ impl Index {
     };
 
     let path2 = options.data_dir()?.join("cache.redb");
-
-    if let Err(err) = fs::create_dir_all(path2.parent().unwrap()) {
-      bail!(
-        "failed to create data dir `{}`: {err}",
-        path.parent().unwrap().display()
-      );
-    }
+    let cache_size2 = 1 << 30;
 
     let database2 = Database::builder()
-      .set_cache_size(1<<30) // 1GB cache
-      .open(path2)?;
+        .set_cache_size(cache_size2) // 1GB cache
+        .open(&path2).unwrap_or(Database::builder()
+        .set_cache_size(cache_size2) // 1GB cache
+        .create(&path2).unwrap());
 
     let database = match Database::builder()
       .set_cache_size(db_cache_size)
